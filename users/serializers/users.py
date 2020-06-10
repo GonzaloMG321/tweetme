@@ -94,3 +94,24 @@ class UserSignUpSerializer(serializers.Serializer):
         user = User.objects.create_user(**data)
         Profile.objects.create(user=user)
         return user
+
+
+class UserProfileModelSerializer(serializers.ModelSerializer):
+    profile = ProfileModelSerializer(read_only=True)
+    biografia = serializers.CharField(required=False, write_only=True)
+    picture = serializers.ImageField(required=False, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'profile', 'biografia', 'picture']
+
+    def update(self, instance, data):
+        print(data)
+        
+        profile = instance.profile
+        profile.biografia = data['biografia']
+
+        if 'picture' in data:
+            profile.picture = data['picture']
+        profile.save()
+        return super(UserProfileModelSerializer, self).update(instance, data)

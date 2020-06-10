@@ -19,7 +19,8 @@ from .serializers import (
     MyTokenObtainPairSerializer, 
     CustomUserSerializer,
     UserSignUpSerializer,
-    UserModelSerializer
+    UserModelSerializer,
+    UserProfileModelSerializer
     )
 from tweets.serializers import BasicTweetSerializer
 
@@ -81,6 +82,14 @@ class UserViewSet(mixins.RetrieveModelMixin,
         data = result.data
 
         return Response(data, status=status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = UserProfileModelSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     
 
 
