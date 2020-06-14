@@ -39,7 +39,7 @@ class TweetViewSet(
 
     filter_backends = [DjangoFilterBackend]
     filterset_class = TweetFilter
-    # filterset_fields = ['content', 'user__username']
+
 
     def get_permissions(self):
         permissions = []
@@ -73,8 +73,10 @@ class TweetViewSet(
         read_serializer = TweetSerializer(tweet, context=context)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
+
     @action(detail=True, methods=['post'])
     def like(self, request, *args, **kwargs):
+        print(request.user.profile)
         tweet = self.get_object()
         serializer_class = self.get_serializer_class()
         serializer = serializer_class(

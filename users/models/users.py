@@ -51,6 +51,13 @@ class User(TweetmeBaseModel, AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
 
+    seguidores = models.ManyToManyField(
+        'users.User',
+        through='users.Seguidor',
+        through_fields=('siguiendo', 'seguidor')
+    )
+
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['nombre', 'apellido_paterno', 'email']
 
@@ -61,3 +68,19 @@ class User(TweetmeBaseModel, AbstractBaseUser):
         """Return username"""
         return self.username
 
+
+class Seguidor(TweetmeBaseModel):
+    seguidor = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE,
+        related_name='seguidor'
+    )
+
+    siguiendo = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE,
+        related_name='siguiendo'
+    )
+
+    def __str__():
+        return '{} está siguiendo a {}'.format(seguidor.username, siguiendo.username)

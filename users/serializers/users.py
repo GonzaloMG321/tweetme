@@ -10,7 +10,7 @@ from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 # Model
-from users.models import User, Profile
+from users.models import User, Profile, Seguidor
 
 # Serializers
 from users.serializers.profiles import ProfileModelSerializer
@@ -19,7 +19,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     @classmethod
     def get_token(cls, user):
-        print(user)
         token = super(MyTokenObtainPairSerializer, cls).get_token(user)
 
         token['nombre'] = user.nombre
@@ -106,8 +105,6 @@ class UserProfileModelSerializer(serializers.ModelSerializer):
         fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'profile', 'biografia', 'picture']
 
     def update(self, instance, data):
-        print(data)
-        
         profile = instance.profile
         profile.biografia = data['biografia']
 
@@ -115,3 +112,56 @@ class UserProfileModelSerializer(serializers.ModelSerializer):
             profile.picture = data['picture']
         profile.save()
         return super(UserProfileModelSerializer, self).update(instance, data)
+
+class FollowUnfollowUserSerializer(serializers.Serializer):
+    action = serializers.CharField()
+    seguidor = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    def validate_action(self, value):
+        options = ['follow', 'unfollow']
+        if not value in options:
+            raise serializers.ValidationError('La acción enviada no es válida')
+        return value
+
+    def validate_seguidor(self, seguidor):
+        siguiendo = self.context['siguiendo']
+        
+        if siguiendo == seguidor:
+            raise serializers.ValidationError('No puedes seguir o dejar de seguir tu propio perfil')
+        return seguidor
+
+    def validate(self, data):
+        siguiendo = self.context['siguiendo']
+        seguidor = data['seguidor']
+        opcion = data['action']
+        
+        qs = Seguidor.objects.filter(seguidor=seguidor, siguiendo=siguiendo)
+        
+        if opcion == 'follow':
+            if qs.exists():
+                raise serializers.ValidationError('Ya sigues a este usuario')
+        else:
+            if not qs.exists():
+                raise serializers.ValidationError('No sigues a este usuario')
+        return data
+
+    def create(self, data):
+        siguiendo = self.context['siguiendo']
+        seguidor = data['seguidor']
+        action = data['action']
+
+        if action == 'follow':
+            seguidor_siguiendo = Seguidor.objects.create(
+                seguidor=seguidor,
+                siguiendo=siguiendo
+            )
+        else: 
+            seguidor_siguiendo = Seguidor.objects.filter(
+                seguidor=seguidor,
+                siguiendo=siguiendo
+            )
+            seguidor_siguiendo.delete()
+        return data
+
+
+

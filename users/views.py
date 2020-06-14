@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 # Permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from .permissions.users import IsProfileOwner
 
 # Serializers
 from .serializers import (
@@ -20,12 +21,13 @@ from .serializers import (
     CustomUserSerializer,
     UserSignUpSerializer,
     UserModelSerializer,
-    UserProfileModelSerializer
+    UserProfileModelSerializer,
+    FollowUnfollowUserSerializer
     )
 from tweets.serializers import BasicTweetSerializer
 
 # Models
-from users.models import User
+from users.models import User, Seguidor
 from tweets.models import Tweet
 
 class ObtainTokenPairWithColorView(TokenObtainPairView):
@@ -57,6 +59,16 @@ class UserViewSet(mixins.RetrieveModelMixin,
     serializer_class = UserModelSerializer
     lookup_field = 'username'
 
+    def get_permissions(self):
+        permissions = []
+        if self.action in ['update']:
+            permissions.append(IsAuthenticated)
+            permissions.append(IsProfileOwner)
+        if self.action == 'follow_unfollow':
+            permissions.append(IsAuthenticated)
+        return [permission() for permission in permissions]
+
+
     @action(detail=False, methods=['post'])
     def signup(self, request):
         """User signup"""
@@ -82,6 +94,21 @@ class UserViewSet(mixins.RetrieveModelMixin,
         data = result.data
 
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def follow_unfollow(self, request, *args, **kwargs):
+        siguiendo = self.get_object()
+        context = {
+            'siguiendo': siguiendo,
+            'request': request
+        }
+        serializer = FollowUnfollowUserSerializer(
+            data=request.data,
+            context=context
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({}, status=status.HTTP_200_OK)   
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
