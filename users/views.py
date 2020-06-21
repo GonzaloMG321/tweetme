@@ -22,7 +22,8 @@ from .serializers import (
     UserSignUpSerializer,
     UserModelSerializer,
     UserProfileModelSerializer,
-    FollowUnfollowUserSerializer
+    FollowUnfollowUserSerializer,
+    UserProfileInformationSerializer
     )
 from tweets.serializers import BasicTweetSerializer
 
@@ -68,6 +69,10 @@ class UserViewSet(mixins.RetrieveModelMixin,
             permissions.append(IsAuthenticated)
         return [permission() for permission in permissions]
 
+    def get_serializer_context(self):
+        context = super(UserViewSet, self).get_serializer_context()
+        context['user'] = self.request.user
+        return context
 
     @action(detail=False, methods=['post'])
     def signup(self, request):
@@ -109,6 +114,27 @@ class UserViewSet(mixins.RetrieveModelMixin,
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({}, status=status.HTTP_200_OK)   
+
+    @action(detail=True, methods=['get'])
+    def information(self, request, *args, **kwargs):
+        context = self.get_serializer_context()
+        instance = self.get_object()
+        serializer = UserProfileInformationSerializer(
+            instance,
+            context=context
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK )
+
+    @action(detail=True, methods=['get'])
+    def seguidores(self, request, *args, **kwargs):
+        user = self.get_object()
+        context = self.get_serializer_context()
+        print(context)
+        serializer = UserProfileInformationSerializer(
+            user.seguidores, 
+            context=context,
+            many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

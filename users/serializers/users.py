@@ -49,6 +49,22 @@ class UserModelSerializer(serializers.ModelSerializer):
         fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'username', 'profile']
 
 
+class UserProfileInformationSerializer(serializers.ModelSerializer):
+    follow_account = serializers.SerializerMethodField(read_only=True)
+    profile = ProfileModelSerializer(read_only=True)
+    
+    class Meta(UserModelSerializer.Meta):
+        fields = UserModelSerializer.Meta.fields + ['profile', 'follow_account']
+    
+    def get_follow_account(self, obj):
+        siguiendo = obj
+        seguidor = self.context['user']
+        if not seguidor.is_anonymous:
+            qs = Seguidor.objects.filter(seguidor=seguidor, siguiendo=siguiendo)
+            return qs.exists()
+        return False
+
+
 class UserSignUpSerializer(serializers.Serializer):
     """User create serializer"""
     username = serializers.CharField(
@@ -106,7 +122,7 @@ class UserProfileModelSerializer(serializers.ModelSerializer):
 
     def update(self, instance, data):
         profile = instance.profile
-        profile.biografia = data['biografia']
+        profile.biografia = data.get('biografia', '')
 
         if 'picture' in data:
             profile.picture = data['picture']

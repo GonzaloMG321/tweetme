@@ -18,4 +18,4 @@ class Profile(TweetmeBaseModel):
         null=True
     )
 
-    biografia = models.TextField(max_length=500, blank=True)
+    biografia = models.TextField(max_length=500, blank=True, null=True)
