@@ -129,16 +129,19 @@ class UserViewSet(mixins.RetrieveModelMixin,
     def seguidores(self, request, *args, **kwargs):
         user = self.get_object()
         context = self.get_serializer_context()
-        print(context)
+        queryset = User.objects.filter(seguidores=user)
+        page = self.paginate_queryset(queryset)
         serializer = UserProfileInformationSerializer(
-            user.seguidores, 
-            context=context,
-            many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            page,
+            many=True,
+            context=context
+        )
+        result = self.get_paginated_response(serializer.data)
+        return Response(result.data, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = UserProfileModelSerializer(instance, data=request.data, partial=True)
+        serializer = UserProfileInformationModelSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)

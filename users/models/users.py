@@ -54,7 +54,15 @@ class User(TweetmeBaseModel, AbstractBaseUser):
     seguidores = models.ManyToManyField(
         'users.User',
         through='users.Seguidor',
-        through_fields=('siguiendo', 'seguidor')
+        through_fields=('siguiendo', 'seguidor'),
+        related_name='seguidores_user'
+    )
+
+    followings = models.ManyToManyField(
+        'users.User',
+        through='users.Seguidor',
+        through_fields=('seguidor', 'siguiendo'),
+        related_name='siguiendo_user'
     )
 
 
