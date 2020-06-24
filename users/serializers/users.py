@@ -10,7 +10,7 @@ from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 # Model
-from users.models import User, Profile, Seguidor
+from users.models import User, Profile
 
 # Serializers
 from users.serializers.profiles import ProfileModelSerializer
@@ -148,11 +148,13 @@ class FollowUnfollowUserSerializer(serializers.Serializer):
 
     def validate(self, data):
         siguiendo = self.context['siguiendo']
-        seguidor = data['seguidor']
+        profile = siguiendo.profile
+        me = data['seguidor']
         opcion = data['action']
         
-        qs = Seguidor.objects.filter(seguidor=seguidor, siguiendo=siguiendo)
-        
+        qs = profile.followers.filter(username=me.username)
+        print(qs.exists())
+        print(opcion)
         if opcion == 'follow':
             if qs.exists():
                 raise serializers.ValidationError('Ya sigues a este usuario')
@@ -163,20 +165,24 @@ class FollowUnfollowUserSerializer(serializers.Serializer):
 
     def create(self, data):
         siguiendo = self.context['siguiendo']
-        seguidor = data['seguidor']
+        me = data['seguidor']
+        profile = siguiendo.profile
         action = data['action']
 
         if action == 'follow':
-            seguidor_siguiendo = Seguidor.objects.create(
+            """seguidor_siguiendo = Seguidor.objects.create(
                 seguidor=seguidor,
                 siguiendo=siguiendo
-            )
-        else: 
+            )"""
+            profile.followers.add(me)
+        else:
+            """ 
             seguidor_siguiendo = Seguidor.objects.filter(
                 seguidor=seguidor,
                 siguiendo=siguiendo
-            )
-            seguidor_siguiendo.delete()
+            )"""
+            # seguidor_siguiendo.delete()
+            profile.followers.remove(me)
         return data
 
 

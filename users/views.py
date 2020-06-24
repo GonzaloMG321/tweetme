@@ -28,7 +28,7 @@ from .serializers import (
 from tweets.serializers import BasicTweetSerializer
 
 # Models
-from users.models import User, Seguidor
+from users.models import User
 from tweets.models import Tweet
 
 class ObtainTokenPairWithColorView(TokenObtainPairView):
@@ -107,6 +107,7 @@ class UserViewSet(mixins.RetrieveModelMixin,
             'siguiendo': siguiendo,
             'request': request
         }
+        print(request.data)
         serializer = FollowUnfollowUserSerializer(
             data=request.data,
             context=context
@@ -125,8 +126,26 @@ class UserViewSet(mixins.RetrieveModelMixin,
         )
         return Response(serializer.data, status=status.HTTP_200_OK )
 
+    """
+    Seguidores original
     @action(detail=True, methods=['get'])
     def seguidores(self, request, *args, **kwargs):
+        user = self.get_object()
+        context = self.get_serializer_context()
+        queryset = User.objects.filter(followings=user)
+        page = self.paginate_queryset(queryset)
+        serializer = UserProfileInformationSerializer(
+            page,
+            many=True,
+            context=context
+        )
+        result = self.get_paginated_response(serializer.data)
+        return Response(result.data, status=status.HTTP_200_OK)
+    """
+    """
+    Siguiendo original
+    @action(detail=True, methods=['get'])
+    def siguiendo(self, request, *args, **kwargs):
         user = self.get_object()
         context = self.get_serializer_context()
         queryset = User.objects.filter(seguidores=user)
@@ -138,15 +157,10 @@ class UserViewSet(mixins.RetrieveModelMixin,
         )
         result = self.get_paginated_response(serializer.data)
         return Response(result.data, status=status.HTTP_200_OK)
-
+    """
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = UserProfileInformationModelSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-    
-
-
-    
