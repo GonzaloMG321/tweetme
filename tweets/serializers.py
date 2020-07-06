@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Tweet, TweetLike
 
 # Serializers
-from users.serializers import UserModelSerializer
+from users.serializers import UserProfileSerializer
 
 MAX_TWEET_LENGTH = settings.MAX_TWEET_LENGTH
 TWEET_ACTION_OPTIONS = settings.TWEET_ACTION_OPTIONS
@@ -64,11 +64,28 @@ class TweetCreateSerializer(serializers.ModelSerializer):
         tweet = Tweet.objects.create(content=data['content'], user=user)
         return tweet
 
+class TweetParentSerializer(serializers.ModelSerializer):
+    user = UserProfileSerializer(read_only=True)
+    likes = serializers.SerializerMethodField(read_only=True)
+    user_like_it = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Tweet
+        fields = ['id', 'content', 'likes', 'user_like_it', 'user']
+    
+    def get_likes(self, obj):
+        return obj.likes.count()
+
+    def get_user_like_it(self, obj):
+        user = self.context['user']
+        if not user.is_anonymous:
+            return obj.likes.filter(id=user.id).exists()
+        return False
+
 class BasicTweetSerializer(serializers.ModelSerializer):
     likes = serializers.SerializerMethodField(read_only=True)
-    parent = TweetCreateSerializer(read_only=True)
+    parent = TweetParentSerializer(read_only=True)
     user_like_it = serializers.SerializerMethodField(read_only=True)
-    # user = UserModelSerializer(read_only=True)
 
     class Meta:
         model = Tweet
@@ -84,7 +101,7 @@ class BasicTweetSerializer(serializers.ModelSerializer):
         return False
 
 class TweetSerializer(BasicTweetSerializer):
-    user = UserModelSerializer(read_only=True)
+    user = UserProfileSerializer(read_only=True)
 
     class Meta(BasicTweetSerializer.Meta):
         fields = BasicTweetSerializer.Meta.fields + ['user']

@@ -25,6 +25,7 @@ class MyUserManager(BaseUserManager):
 
         user.set_password(password)
         user.save(using=self._db)
+        #Profile.objects.create(user)
         return user
 
     def create_superuser(self, username, email, nombre, apellido_paterno, password):
@@ -54,9 +55,20 @@ class User(TweetmeBaseModel, AbstractBaseUser):
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['nombre', 'apellido_paterno', 'email']
 
+    followers = models.ManyToManyField(
+        'User',
+        related_name='followings',
+        through='FollowRelation',
+        through_fields=('following', 'follower')
+    )
 
     objects = MyUserManager()
     
     def __str__(self):
         """Return username"""
         return self.username
+
+
+class FollowRelation(TweetmeBaseModel):
+    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE);
+    following = models.ForeignKey(User, on_delete=models.CASCADE);

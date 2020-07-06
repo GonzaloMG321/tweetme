@@ -16,7 +16,8 @@ from .serializers import (
     TweetSerializer,
     TweetActionSerializer,
     TweetCreateSerializer,
-    RetweetSerializers
+    RetweetSerializers,
+    BasicTweetSerializer
     )
 
 # Models
@@ -25,6 +26,7 @@ from tweets.models import Tweet
 # Permissions
 from rest_framework.permissions import IsAuthenticated
 from tweets.permissions import IsOwnerTweet
+
 
 
 class TweetViewSet(
@@ -43,7 +45,7 @@ class TweetViewSet(
 
     def get_permissions(self):
         permissions = []
-        if self.action in ['retweet','like', 'create', 'destroy', 'update', 'partial_update']:
+        if self.action in ['retweet','like', 'create', 'destroy', 'update', 'partial_update', 'feed']:
             permissions.append(IsAuthenticated)
         if self.action in ['destroy', 'update', 'partial_update']:
             permissions.append(IsOwnerTweet)
@@ -106,3 +108,20 @@ class TweetViewSet(
         newTweet = serializer.save()
         serializer_new = TweetSerializer(newTweet, context=context)
         return Response(serializer_new.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get'])
+    def feed(self, request, *args, **kwargs):
+        user = request.user
+        qs = Tweet.objects.all().feed(user)
+        page = self.paginate_queryset(qs)
+
+        context = self.get_serializer_context()
+        serializer = TweetSerializer(
+            page,
+            many=True,
+            context=context
+        )
+
+        result = self.get_paginated_response(serializer.data)
+        
+        return Response(result.data, status=status.HTTP_200_OK)

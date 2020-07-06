@@ -20,12 +20,12 @@ from .serializers import (
     MyTokenObtainPairSerializer, 
     CustomUserSerializer,
     UserSignUpSerializer,
-    UserModelSerializer,
-    UserProfileModelSerializer,
+    UserProfileSerializer,
+    UserProfileUpdateSerializer,
     FollowUnfollowUserSerializer,
     UserProfileInformationSerializer
     )
-from tweets.serializers import BasicTweetSerializer
+from tweets.serializers import TweetSerializer
 
 # Models
 from users.models import User
@@ -57,7 +57,7 @@ class UserViewSet(mixins.RetrieveModelMixin,
                     viewsets.GenericViewSet):
     """User viewsets"""
     queryset = User.objects.filter(is_active=True)
-    serializer_class = UserModelSerializer
+    serializer_class = UserProfileSerializer
     lookup_field = 'username'
 
     def get_permissions(self):
@@ -80,7 +80,7 @@ class UserViewSet(mixins.RetrieveModelMixin,
         serializer = UserSignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserModelSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(UserProfileSerializer(user).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
     def tweets(self,  request, *args, **kwargs):
@@ -88,12 +88,12 @@ class UserViewSet(mixins.RetrieveModelMixin,
         user = self.get_object()
         queryset = Tweet.objects.filter(user=user)
         page = self.paginate_queryset(queryset)
-        serializer = BasicTweetSerializer(
+        
+        context = self.get_serializer_context()
+        serializer = TweetSerializer(
             page, 
             many=True,
-            context={
-                'user': request.user
-            }
+            context=context
         )
         result = self.get_paginated_response(serializer.data)
         data = result.data
@@ -107,14 +107,14 @@ class UserViewSet(mixins.RetrieveModelMixin,
             'siguiendo': siguiendo,
             'request': request
         }
-        print(request.data)
+        
         serializer = FollowUnfollowUserSerializer(
             data=request.data,
             context=context
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({}, status=status.HTTP_200_OK)   
+        data = serializer.save()
+        return Response(data, status=status.HTTP_200_OK)   
 
     @action(detail=True, methods=['get'])
     def information(self, request, *args, **kwargs):
@@ -126,13 +126,14 @@ class UserViewSet(mixins.RetrieveModelMixin,
         )
         return Response(serializer.data, status=status.HTTP_200_OK )
 
-    """
-    Seguidores original
+    
+    
     @action(detail=True, methods=['get'])
     def seguidores(self, request, *args, **kwargs):
         user = self.get_object()
         context = self.get_serializer_context()
-        queryset = User.objects.filter(followings=user)
+        queryset = user.followers.all()
+        print(queryset)
         page = self.paginate_queryset(queryset)
         serializer = UserProfileInformationSerializer(
             page,
@@ -141,14 +142,13 @@ class UserViewSet(mixins.RetrieveModelMixin,
         )
         result = self.get_paginated_response(serializer.data)
         return Response(result.data, status=status.HTTP_200_OK)
-    """
-    """
-    Siguiendo original
+    
+
     @action(detail=True, methods=['get'])
     def siguiendo(self, request, *args, **kwargs):
         user = self.get_object()
         context = self.get_serializer_context()
-        queryset = User.objects.filter(seguidores=user)
+        queryset = user.followings.all()
         page = self.paginate_queryset(queryset)
         serializer = UserProfileInformationSerializer(
             page,
@@ -157,10 +157,10 @@ class UserViewSet(mixins.RetrieveModelMixin,
         )
         result = self.get_paginated_response(serializer.data)
         return Response(result.data, status=status.HTTP_200_OK)
-    """
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = UserProfileInformationModelSerializer(instance, data=request.data, partial=True)
+        serializer = UserProfileUpdateSerializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)

@@ -10,7 +10,7 @@ from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 # Model
-from users.models import User, Profile
+from users.models import User, Profile, FollowRelation
 
 # Serializers
 from users.serializers.profiles import ProfileModelSerializer
@@ -39,28 +39,33 @@ class CustomUserSerializer(serializers.ModelSerializer):
         instance = self.Meta.model(**data)
         if password is not None:
             instance.set_password(password)
+        
         instance.save()
         return instance
 
 class UserModelSerializer(serializers.ModelSerializer):
-    profile = ProfileModelSerializer(read_only=True)
     class Meta:
         model = User
-        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'username', 'profile']
+        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'username']
 
-
-class UserProfileInformationSerializer(serializers.ModelSerializer):
-    follow_account = serializers.SerializerMethodField(read_only=True)
+class UserProfileSerializer(UserModelSerializer):
     profile = ProfileModelSerializer(read_only=True)
-    
+
     class Meta(UserModelSerializer.Meta):
-        fields = UserModelSerializer.Meta.fields + ['profile', 'follow_account']
+        fields = UserModelSerializer.Meta.fields + ['profile']
+
+
+class UserProfileInformationSerializer(UserProfileSerializer):
+    follow_account = serializers.SerializerMethodField(read_only=True)
+    
+    class Meta(UserProfileSerializer.Meta):
+        fields = UserProfileSerializer.Meta.fields + ['follow_account']
     
     def get_follow_account(self, obj):
-        siguiendo = obj
-        seguidor = self.context['user']
-        if not seguidor.is_anonymous:
-            qs = Seguidor.objects.filter(seguidor=seguidor, siguiendo=siguiendo)
+        me = self.context['user']
+        print(me)
+        if not me.is_anonymous:
+            qs = obj.followers.filter(id=me.id)
             return qs.exists()
         return False
 
@@ -111,14 +116,12 @@ class UserSignUpSerializer(serializers.Serializer):
         return user
 
 
-class UserProfileModelSerializer(serializers.ModelSerializer):
-    profile = ProfileModelSerializer(read_only=True)
+class UserProfileUpdateSerializer(UserProfileSerializer):
     biografia = serializers.CharField(required=False, write_only=True)
     picture = serializers.ImageField(required=False, write_only=True)
 
-    class Meta:
-        model = User
-        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'profile', 'biografia', 'picture']
+    class Meta(UserProfileSerializer.Meta):
+        fields = UserProfileSerializer.Meta.fields + ['biografia', 'picture']
 
     def update(self, instance, data):
         profile = instance.profile
@@ -127,7 +130,7 @@ class UserProfileModelSerializer(serializers.ModelSerializer):
         if 'picture' in data:
             profile.picture = data['picture']
         profile.save()
-        return super(UserProfileModelSerializer, self).update(instance, data)
+        return super(UserProfileUpdateSerializer, self).update(instance, data)
 
 class FollowUnfollowUserSerializer(serializers.Serializer):
     action = serializers.CharField()
@@ -147,14 +150,11 @@ class FollowUnfollowUserSerializer(serializers.Serializer):
         return seguidor
 
     def validate(self, data):
-        siguiendo = self.context['siguiendo']
-        profile = siguiendo.profile
+        user = self.context['siguiendo']
         me = data['seguidor']
         opcion = data['action']
         
-        qs = profile.followers.filter(username=me.username)
-        print(qs.exists())
-        print(opcion)
+        qs = user.followers.filter(id=me.id)       
         if opcion == 'follow':
             if qs.exists():
                 raise serializers.ValidationError('Ya sigues a este usuario')
@@ -164,26 +164,19 @@ class FollowUnfollowUserSerializer(serializers.Serializer):
         return data
 
     def create(self, data):
-        siguiendo = self.context['siguiendo']
+        user = self.context['siguiendo']
         me = data['seguidor']
-        profile = siguiendo.profile
         action = data['action']
 
         if action == 'follow':
-            """seguidor_siguiendo = Seguidor.objects.create(
-                seguidor=seguidor,
-                siguiendo=siguiendo
-            )"""
-            profile.followers.add(me)
+            user.followers.add(me)
         else:
-            """ 
-            seguidor_siguiendo = Seguidor.objects.filter(
-                seguidor=seguidor,
-                siguiendo=siguiendo
+            """seguidor_siguiendo = Seguidor.objects.filter(
+                seguidor=me,
+                siguiendo=user
             )"""
             # seguidor_siguiendo.delete()
-            profile.followers.remove(me)
-        return data
-
-
-
+            user.followers.remove(me)
+        return {
+            "count": user.followers.count()
+        }
