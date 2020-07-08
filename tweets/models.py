@@ -46,3 +46,11 @@ class Tweet(TweetmeBaseModel):
 
     def __str__(self):
         return self.content
+
+class Comment(TweetmeBaseModel):
+    user = models.ForeignKey(User, related_name='comentarios', on_delete=models.CASCADE)
+    tweet = models.ForeignKey(Tweet, related_name='comentario', on_delete=models.CASCADE)
+    content = models.TextField()
+
+    class  Meta: 
+        ordering = ['-created']

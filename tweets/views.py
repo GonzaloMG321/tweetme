@@ -17,11 +17,13 @@ from .serializers import (
     TweetActionSerializer,
     TweetCreateSerializer,
     RetweetSerializers,
-    BasicTweetSerializer
+    BasicTweetSerializer,
+    CommentCreateSerializer,
+    CommentSerializer
     )
 
 # Models
-from tweets.models import Tweet
+from tweets.models import Tweet, Comment
 
 # Permissions
 from rest_framework.permissions import IsAuthenticated
@@ -45,7 +47,7 @@ class TweetViewSet(
 
     def get_permissions(self):
         permissions = []
-        if self.action in ['retweet','like', 'create', 'destroy', 'update', 'partial_update', 'feed']:
+        if self.action in ['retweet','like', 'create', 'destroy', 'update', 'partial_update', 'feed', 'comment']:
             permissions.append(IsAuthenticated)
         if self.action in ['destroy', 'update', 'partial_update']:
             permissions.append(IsOwnerTweet)
@@ -58,6 +60,8 @@ class TweetViewSet(
             return TweetActionSerializer
         if self.action == 'retweet':
             return RetweetSerializers
+        if self.action == 'comment':
+            return CommentCreateSerializer
         return TweetSerializer
 
     def get_serializer_context(self):
@@ -68,7 +72,10 @@ class TweetViewSet(
     def create(self, request, *args, **kwargs):
         serializer_class = self.get_serializer_class()
         context = self.get_serializer_context()
-        serializer = serializer_class(data=request.data, context=context)
+        serializer = serializer_class(
+            data=request.data, 
+            context=context
+        )
         serializer.is_valid(raise_exception=True)
         tweet = serializer.save()
 
@@ -78,7 +85,6 @@ class TweetViewSet(
 
     @action(detail=True, methods=['post'])
     def like(self, request, *args, **kwargs):
-        print(request.user.profile)
         tweet = self.get_object()
         serializer_class = self.get_serializer_class()
         serializer = serializer_class(
@@ -125,3 +131,32 @@ class TweetViewSet(
         result = self.get_paginated_response(serializer.data)
         
         return Response(result.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def comment(self, request, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        context = self.get_serializer_context()
+        tweet = self.get_object()
+
+        context['tweet'] = tweet
+
+        serializer = serializer_class(
+            data=request.data,
+            context=context
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @comment.mapping.get
+    def get_comments(self, request, pk=None):
+        tweet = self.get_object()
+        context = self.get_serializer_context()
+        qs = Comment.objects.filter(tweet=tweet)
+        serializer = CommentSerializer(
+            qs,
+            many=True,
+            context=context
+        )
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

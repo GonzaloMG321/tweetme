@@ -63,7 +63,6 @@ class UserProfileInformationSerializer(UserProfileSerializer):
     
     def get_follow_account(self, obj):
         me = self.context['user']
-        print(me)
         if not me.is_anonymous:
             qs = obj.followers.filter(id=me.id)
             return qs.exists()

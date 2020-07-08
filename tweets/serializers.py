@@ -8,7 +8,7 @@ from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 
 # Models
-from .models import Tweet, TweetLike
+from .models import Tweet, TweetLike, Comment
 
 # Serializers
 from users.serializers import UserProfileSerializer
@@ -124,3 +124,39 @@ class RetweetSerializers(serializers.Serializer):
         newTweet = Tweet.objects.create(user=user, content=data['content'], parent=tweet)
         return newTweet
 
+class CommentCreateSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    content = serializers.CharField(
+        allow_blank=False,
+        min_length=1,
+        max_length=250,
+        error_messages= {
+            'blank': 'El comentario no debe estar vacío',
+            'min_length': 'La longitud mínima debe ser 1 caracteres',
+            'max_length': 'La longitud máxima debe ser 250 caracteres'
+        }
+    )
+    
+    class Meta:
+        model = Comment
+        fields = ['id', 'content', 'user']
+
+
+    def create(self, data):
+        context = self.context        
+        tweet = context['tweet']
+        user = data['user']
+        Comment.objects.create(
+            content=data['content'],
+            user=user,
+            tweet=tweet
+        )
+
+        return data
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = UserProfileSerializer(read_only=True)
+    class Meta:
+        model = Comment
+        fields = ['id', 'content', 'user']
+        

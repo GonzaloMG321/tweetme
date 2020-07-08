@@ -133,7 +133,6 @@ class UserViewSet(mixins.RetrieveModelMixin,
         user = self.get_object()
         context = self.get_serializer_context()
         queryset = user.followers.all()
-        print(queryset)
         page = self.paginate_queryset(queryset)
         serializer = UserProfileInformationSerializer(
             page,
