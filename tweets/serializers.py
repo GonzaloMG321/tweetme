@@ -89,7 +89,7 @@ class BasicTweetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tweet
-        fields = ['id', 'content', 'likes', 'is_retweet', 'parent', 'user_like_it']
+        fields = ['id', 'content', 'likes', 'is_retweet', 'parent', 'created', 'user_like_it']
     
     def get_likes(self, obj):
         return obj.likes.count()
@@ -158,5 +158,5 @@ class CommentSerializer(serializers.ModelSerializer):
     user = UserProfileSerializer(read_only=True)
     class Meta:
         model = Comment
-        fields = ['id', 'content', 'user']
+        fields = ['id', 'content', 'user', 'created']
         

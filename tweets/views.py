@@ -153,10 +153,12 @@ class TweetViewSet(
         tweet = self.get_object()
         context = self.get_serializer_context()
         qs = Comment.objects.filter(tweet=tweet)
+
+        page = self.paginate_queryset(qs)
         serializer = CommentSerializer(
-            qs,
+            page,
             many=True,
             context=context
         )
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        result = self.get_paginated_response(serializer.data)
+        return Response(result.data, status=status.HTTP_200_OK)
